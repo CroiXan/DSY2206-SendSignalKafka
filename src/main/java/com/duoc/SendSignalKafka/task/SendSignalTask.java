@@ -3,15 +3,15 @@ package com.duoc.SendSignalKafka.task;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.duoc.SendSignalKafka.client.PatientClient;
+import com.duoc.SendSignalKafka.client.VitalSignClient;
 import com.duoc.SendSignalKafka.models.Patient;
 import com.duoc.SendSignalKafka.models.VitalSign;
 import com.duoc.SendSignalKafka.service.KafkaSenderService;
-import com.duoc.SendSignalKafka.service.PatientService;
-import com.duoc.SendSignalKafka.service.VitalSignService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -20,21 +20,25 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 @Component
 public class SendSignalTask {
 
-    @Autowired
-    private PatientService patientService;
+    private final KafkaSenderService kafkaSenderService;
+    private final PatientClient patientClient;
+    private final VitalSignClient vitalSignClient;
+    
 
-    @Autowired
-    private VitalSignService vitalSignService;
+    public SendSignalTask(KafkaSenderService kafkaSenderService, PatientClient patientClient,
+            VitalSignClient vitalSignClient) {
+        this.kafkaSenderService = kafkaSenderService;
+        this.patientClient = patientClient;
+        this.vitalSignClient = vitalSignClient;
+    }
 
-    @Autowired
-    private KafkaSenderService kafkaSenderService;
 
     @Scheduled(fixedRate = 1000)
     public void generateVitalSign() {
 
-        List<Patient> patiensList = this.patientService.getAllPatient();
+        ResponseEntity<List<Patient>> response = this.patientClient.getAllPatients();
 
-        for (Patient patient : patiensList) {
+        for (Patient patient : response.getBody()) {
 
             int frecuenciaCardiaca = (int) (Math.random() * 301);
             int frecuenciaRespiratoria = (int) (Math.random() * 101);
@@ -53,7 +57,7 @@ public class SendSignalTask {
             newVitalSign.setSaturacionOxigeno(saturacionOxigeno);
             newVitalSign.setInstante(LocalDateTime.now());
 
-            this.vitalSignService.saveVitalSign(newVitalSign);
+            this.vitalSignClient.createVitalSign(newVitalSign);
 
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.registerModule(new JavaTimeModule());
