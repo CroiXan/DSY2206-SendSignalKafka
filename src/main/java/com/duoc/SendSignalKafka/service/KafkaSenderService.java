@@ -10,7 +10,7 @@ public class KafkaSenderService {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    private static final String TOPIC = "VitalSign";
+    private static final String TOPIC = "senales_vitales";
 
     public void sendMessage(String message){
         kafkaTemplate.send(TOPIC,message);
